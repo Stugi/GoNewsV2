@@ -60,6 +60,7 @@ func (s *Storage) AddSource(source *Source) (int, error) {
 func (s *Storage) GetSources() ([]Source, error) {
 	var sources []Source
 	rows, err := s.db.Query(context.Background(), "SELECT id, url, name, description FROM source")
+	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -62,7 +63,7 @@ func main() {
 		for posts := range chPosts {
 			err = db.StoreNews(posts)
 			if err != nil {
-				log.Println(err)
+				fmt.Printf("ошибка: %s\n", err)
 			}
 		}
 	}()
@@ -71,6 +72,7 @@ func main() {
 	go func() {
 		for err := range chErrs {
 			log.Println("ошибка:", err)
+			// TODO: запись ошибок в базу если необходимо
 		}
 	}()
 

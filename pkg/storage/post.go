@@ -2,16 +2,17 @@ package storage
 
 import (
 	"context"
+	"fmt"
 )
 
 type Post struct {
 	ID         int
 	Title      string
 	Content    string
-	PubTime    int `db:"pub_time"`
+	PubTime    int
 	Link       string
 	Source     *Source
-	ExternalID string
+	ExternalID string `json:"-"`
 }
 
 // Добавление новости.
@@ -29,24 +30,46 @@ func (s *Storage) GetPosts(sourceID int, limit int) ([]Post, error) {
 	var posts []Post
 	rows, err := s.db.Query(context.Background(),
 		`SELECT 
-			id, 
+			post.id as id, 
 			title, 
 			content, 
 			pub_time, 
-			link, 
-			source_id 
-			FROM post  
-			LIMIT $1
-		ORDER BY pub_time DESC`, limit)
+			link,
+
+			source.id as source_id,
+			source.name as source_name,
+			source.url as source_link,
+			source.description as source_description
+			
+		FROM post
+		LEFT JOIN source ON post.source_id = source.id 
+		ORDER BY pub_time DESC
+		LIMIT $1`, limit)
+
+	defer rows.Close()
 
 	if err != nil {
+		fmt.Printf("Error: %s\n", err)
 		return nil, err
 	}
 
 	for rows.Next() {
 		var post Post
-		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.PubTime, &post.Link, &post.Source.ID)
+		post.Source = &Source{} // initialize the post.Source field
+		err = rows.Scan(
+			&post.ID,
+			&post.Title,
+			&post.Content,
+			&post.PubTime,
+			&post.Link,
+
+			&post.Source.ID,
+			&post.Source.Name,
+			&post.Source.Link,
+			&post.Source.Description,
+		)
 		if err != nil {
+			fmt.Printf("Error: %s\n", err)
 			return nil, err
 		}
 		posts = append(posts, post)
