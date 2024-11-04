@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS sourse, post, info;
+DROP TABLE IF EXISTS source, post, info;
 
 DROP SEQUENCE IF EXISTS id_seq;
 
@@ -7,9 +7,11 @@ CREATE SEQUENCE id_seq;
 -- Схема БД
 -- создание таблиц
 -- Источники новостей
-CREATE TABLE sourse (
+CREATE TABLE source (
     id INTEGER PRIMARY KEY DEFAULT nextval ('id_seq'),
-    url TEXT UNIQUE NOT NULL
+    url TEXT UNIQUE NOT NULL,
+    name TEXT,
+    description TEXT
 );
 
 -- Новости
@@ -19,8 +21,9 @@ CREATE TABLE post (
     content TEXT NOT NULL,
     pub_time INTEGER NOT NULL,
     link TEXT NOT NULL,
-    sourse_id INTEGER NOT NULL,
-    FOREIGN KEY (sourse_id) REFERENCES sourse (id)
+    source_id INTEGER NOT NULL,
+    FOREIGN KEY (source_id) REFERENCES source (id),
+    EXTERNAL_ID TEXT UNIQUE
 );
 
 -- Ошибки

@@ -8,12 +8,13 @@ import (
 	"os"
 	"time"
 
-	"GoNews/pkg/api"
-	"GoNews/pkg/rss"
-	"GoNews/pkg/storage"
+	cachepkg "gonews/v2/cache"
+	apipkg "gonews/v2/pkg/api"
+	"gonews/v2/pkg/rss"
+	"gonews/v2/pkg/storage"
 )
 
-// конфигурация приложения
+// конфигурация приложения.
 type config struct {
 	URLS   []string `json:"rss"`
 	Period int      `json:"request_period"`
@@ -21,11 +22,14 @@ type config struct {
 
 func main() {
 	// инициализация зависимостей приложения
-	db, err := storage.New()
+	cache := cachepkg.New(time.Hour * 24)
+
+	db, err := storage.New(cache)
 	if err != nil {
 		log.Fatal(err)
 	}
-	api := api.New(db)
+
+	api := apipkg.New(db)
 
 	// чтение и раскодирование файла конфигурации
 	b, err := os.ReadFile("./config.json")
@@ -38,18 +42,28 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// добавление источников
+	sources, err := db.GetSources()
+	if err != nil {
+		log.Fatal(err)
+	}
+	cache.Set("sources", sources, time.Hour*24)
+
 	// запуск парсинга новостей в отдельном потоке
 	// для каждой ссылки
 	chPosts := make(chan []storage.Post)
 	chErrs := make(chan error)
 	for _, url := range config.URLS {
-		go parseURL(url, db, chPosts, chErrs, config.Period)
+		go parseURL(url, chPosts, chErrs, config.Period)
 	}
 
 	// запись потока новостей в БД
 	go func() {
 		for posts := range chPosts {
-			db.StoreNews(posts)
+			err = db.StoreNews(posts)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}()
 
@@ -69,7 +83,7 @@ func main() {
 
 // Асинхронное чтение потока RSS. Раскодированные
 // новости и ошибки пишутся в каналы.
-func parseURL(url string, db *storage.DB, posts chan<- []storage.Post, errs chan<- error, period int) {
+func parseURL(url string, posts chan<- []storage.Post, errs chan<- error, period int) {
 	for {
 		news, err := rss.Parse(url)
 		if err != nil {
