@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS source, post, info;
+DROP TABLE IF EXISTS source, post, info, comment;
 
 DROP SEQUENCE IF EXISTS id_seq;
 
@@ -32,4 +32,15 @@ CREATE TABLE info (
     message TEXT NOT NULL,
     time INTEGER NOT NULL,
     type TEXT NOT NULL DEFAULT 'ERROR'
+);
+
+-- Комментарии
+create table comment
+(
+    id        integer   DEFAULT nextval('id_seq_comments'::regclass) not null
+        primary key,
+    text      text                                                   not null,
+    created   timestamp DEFAULT CURRENT_TIMESTAMP,
+    news_id   integer,
+    parent_id integer REFERENCES comment
 );
